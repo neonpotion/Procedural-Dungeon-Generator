@@ -2,288 +2,213 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SA
-{
-    public class Grid : MonoBehaviour
-    {
-        public LevelGenerator levelGenerator;
+namespace SA {
+	public class Grid : MonoBehaviour {
+		public LevelGenerator levelGenerator;
 
-        public GameObject nodePrefab;
+		public GameObject nodePrefab;
 
-        public Sprite ground;
-        public Sprite wall;
-        public Sprite isoTile;
+		public Sprite ground;
+		public Sprite wall;
+		public Sprite isoTile;
 
-        Node[,] grid;
-        int maxX;
-        int maxY;
-        public float scale = 0.32f;
-        public float isoScale = 1.3f;
+		Node[,] grid;
+		int maxX;
+		int maxY;
+		public float scale = 0.32f;
+		public float isoScale = 1.3f;
 
-        public GridType gridType;
-        public enum GridType
-        {
-            ortho, iso
-        }
+		public GridType gridType;
+		public enum GridType {
+			ortho, iso
+		}
 
-        void Start()
-        {
-            levelGenerator.OnLevelGenerationComplete = LevelGenerated;
-//             levelGenerator.GenerateLevel();
-        }
+		void Start() {
+			levelGenerator.OnLevelGenerationComplete = LevelGenerated;
+			//             levelGenerator.GenerateLevel();
+		}
 
-        void LevelGenerated()
-        {
-            InitGrid();
-        }
+		void LevelGenerated() {
+			InitGrid();
+		}
 
-        void InitGrid()
-        {
-            Vector2 maxXY = levelGenerator.GetMaxXY();
-            maxX = Mathf.CeilToInt(maxXY.x);
-            maxY = Mathf.CeilToInt(maxXY.y);
+		void InitGrid() {
+			Vector2 maxXY = levelGenerator.GetMaxXY();
+			maxX = Mathf.CeilToInt(maxXY.x);
+			maxY = Mathf.CeilToInt(maxXY.y);
 
-            Vector2 minXY = levelGenerator.GetMinXY();
-            int minX = Mathf.CeilToInt(Mathf.Abs(minXY.x));
-            int minY = Mathf.CeilToInt(Mathf.Abs(minXY.y));
+			Vector2 minXY = levelGenerator.GetMinXY();
+			int minX = Mathf.CeilToInt(Mathf.Abs(minXY.x));
+			int minY = Mathf.CeilToInt(Mathf.Abs(minXY.y));
 
-            maxX += minX;
-            maxY += minY;
+			maxX += minX;
+			maxY += minY;
 
-            grid = new Node[maxX + 1, maxY + 1];
+			grid = new Node[maxX + 1, maxY + 1];
 
-            #region Render Cells
-            foreach (GeneratorCell c in levelGenerator.cells)
-            {
-                for (int x = c.posX; x <= c.posX + c.width; x++)
-                {
-                    for (int y = c.posY; y <= c.posY + c.height; y++)
-                    {
-                        Node n = grid[x, y];
-                        if(n == null)
-                        {
-                            n = CreateAt(x, y, false);
-                            grid[x, y] = n;
-                        }
+			#region Render Cells
+			foreach (GeneratorCell c in levelGenerator.cells) {
+				bool isRoom = c.isMainRoom || c.isPathRoom;
+				for (int x = c.posX; x <= c.posX + c.width; x++) {
+					for (int y = c.posY; y <= c.posY + c.height; y++) {
+						Node n = grid[x, y];
+						bool isWall = (x == c.posX || x == c.posX + c.width || y == c.posY || y == c.posY + c.height);
+						if (n == null) {
+							n = CreateAt(x, y, isWall);
+							grid[x, y] = n;
+						}
+					}
+				}
+			}
+			#endregion
 
-                        bool isWall = false;
-    
-                        if (x == c.posX || x == c.posX + c.width || y == c.posY || y == c.posY + c.height)
-                        {
-                            isWall = true;
-                        }
+			#region Render Paths
+			foreach (Path p in levelGenerator.paths) {
+				foreach (BlockPath bp in p.path) {
+					int startX = Mathf.FloorToInt(bp.start.x);
+					int startY = Mathf.FloorToInt(bp.start.y);
+					int endX = Mathf.CeilToInt(bp.end.x);
+					int endY = Mathf.CeilToInt(bp.end.y);
 
-                        n.isWall = isWall;
+					int tmp = startX;
+					startX = Mathf.Min(startX, endX);
+					endX = Mathf.Max(endX, tmp);
 
-                        if (gridType == GridType.ortho)
-                        {
-                            if (isWall)
-                            {
-                                n.nodeReferences.render.sprite = wall;
-                            }
-                            else
-                            {
-                                n.nodeReferences.render.sprite = ground;
-                            }
-                        }
-                        else
-                        {
-                            n.nodeReferences.render.sprite = isoTile;
-                        }
+					tmp = startY;
+					startY = Mathf.Min(startY, endY);
+					endY = Mathf.Max(endY, tmp);
 
-                    }
-                }
-            }
-            #endregion
+					for (int x = startX; x <= endX; x++) {
+						for (int y = startY; y <= endY; y++) {
+							Node n = grid[x, y];
+							if (n == null) {
+								CreateAt(x, y, false);
+							} else {
+								if (gridType == GridType.ortho) {
+									if (n.isWall) {
+										n.isWall = false;
+										n.nodeReferences.render.sprite = ground;
+									}
+								} else {
+									n.nodeReferences.render.sprite = isoTile;
+								}
+							}
 
-            #region Render Paths
-            foreach (Path p in levelGenerator.paths)
-            {
-                foreach (BlockPath bp in p.path)
-                {
-                    int startX = Mathf.FloorToInt(bp.start.x);
-                    int startY = Mathf.FloorToInt(bp.start.y);
-                    int endX = Mathf.CeilToInt(bp.end.x);
-                    int endY = Mathf.CeilToInt(bp.end.y);
+							AddPathWalls(x, y);
 
-                    int tmp = startX;
-                    startX = Mathf.Min(startX, endX);
-                    endX = Mathf.Max(endX, tmp);
+							if (startY == endY) {
+								int targetY = y + 1;
+								if (y == maxY) {
+									targetY = y - 1;
+								}
 
-                    tmp = startY;
-                    startY = Mathf.Min(startY, endY);
-                    endY = Mathf.Max(endY, tmp);
+								Node nn = grid[x, targetY];
+								if (nn == null) {
+									CreateAt(x, targetY, false);
+								} else {
+									if (gridType == GridType.ortho) {
+										if (nn.isWall) {
+											nn.isWall = false;
+											nn.nodeReferences.render.sprite = ground;
+										}
+									} else {
+										nn.nodeReferences.render.sprite = isoTile;
+									}
+								}
 
-                    for (int x = startX; x <= endX; x++)
-                    {
-                        for (int y = startY; y <= endY; y++)
-                        {
-                            Node n = grid[x, y];
-                            if(n == null)
-                            {
-                                CreateAt(x, y, false);
-                            }
-                            else
-                            {
-                                if (gridType == GridType.ortho)
-                                {
-                                    if (n.isWall)
-                                    {
-                                        n.isWall = false;
-                                        n.nodeReferences.render.sprite = ground;
-                                    }
-                                }
-                                else
-                                {
-                                    n.nodeReferences.render.sprite = isoTile;
-                                }
-                            }
+								AddPathWalls(x, targetY);
+							}
+						}
+					}
+				}
+			}
+			#endregion
+		}
 
-                            AddPathWalls(x, y);
+		Node CreateAt(int x, int y, bool isWall) {
+			Node n = grid[x, y];
+			if (n == null) {
+				n = new Node();
+				n.x = x;
+				n.y = y;
 
-                            if(startY == endY)
-                            {
-                                int targetY = y + 1;
-                                if(y == maxY)
-                                {
-                                    targetY = y - 1;
-                                }
+				GameObject go = Instantiate(nodePrefab);
+				Vector3 tp = Vector3.zero;
+				NodeReferences nr = go.GetComponent<NodeReferences>();
+				n.nodeReferences = nr;
 
-                                Node nn = grid[x, targetY];
-                                if(nn == null)
-                                {
-                                    CreateAt(x, targetY, false);
-                                }
-                                else
-                                {
-                                    if (gridType == GridType.ortho)
-                                    {
-                                        if (nn.isWall)
-                                        {
-                                            nn.isWall = false;
-                                            nn.nodeReferences.render.sprite = ground;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        nn.nodeReferences.render.sprite = isoTile;
-                                    }
-                                }
+				if (gridType == GridType.ortho) {
+					tp.x = x * scale;
+					tp.y = y * scale;
+					tp.z = y;
+				} else {
+					tp.x = (x * isoScale);
+					tp.x += (y * isoScale);
+					tp.y = y * isoScale / 2;
+					tp.y += -x * isoScale / 2;
+					tp.z = 500 - x + y;
+				}
 
-                                AddPathWalls(x, targetY);
-                            }
-                        }
-                    }
-                }
-            }
-            #endregion
-        }
+				go.transform.position = tp;
+				go.transform.parent = this.transform;
+				grid[x, y] = n;
 
-        Node CreateAt(int x, int y, bool isWall)
-        {
-            Node n = grid[x, y];
-            if(n == null)
-            {
-                n = new Node();
-                n.x = x;
-                n.y = y;
+			}
 
-                GameObject go = Instantiate(nodePrefab);
-                Vector3 tp = Vector3.zero;
-                NodeReferences nr = go.GetComponent<NodeReferences>();
-                n.nodeReferences = nr;
+			n.isWall = isWall;
 
-                if (gridType == GridType.ortho)
-                {
-                    tp.x = x * scale;
-                    tp.y = y * scale;
-                    tp.z = y;
-                }
-                else
-                {
-                    tp.x = (x * isoScale);
-                    tp.x += (y * isoScale);
-                    tp.y = y * isoScale / 2;
-                    tp.y += -x * isoScale / 2;
-                    tp.z = 500 - x + y;
-                }
+			if (gridType == GridType.ortho) {
+				if (isWall) {
+					n.nodeReferences.render.sprite = wall;
+				} else {
+					n.nodeReferences.render.sprite = ground;
+				}
+			} else {
+				n.nodeReferences.render.sprite = isoTile;
+			}
 
-                go.transform.position = tp;
-                go.transform.parent = this.transform;
-                grid[x, y] = n;
-     
-            }
+			return n;
+		}
 
-            n.isWall = isWall;
+		void AddPathWalls(int x, int y) {
+			//top node
+			if (y < maxY) {
+				Node n = grid[x, y + 1];
+				if (n == null) {
+					CreateAt(x, y + 1, true);
+				}
+			}
 
-            if (gridType == GridType.ortho)
-            {
-                if (isWall)
-                {
-                    n.nodeReferences.render.sprite = wall;
-                }
-                else
-                {
-                    n.nodeReferences.render.sprite = ground;
-                }
-            }
-            else
-            {
-                n.nodeReferences.render.sprite = isoTile;
-            }
+			//right node
+			if (x < maxX) {
+				Node n = grid[x + 1, y];
+				if (n == null) {
+					CreateAt(x + 1, y, true);
+				}
+			}
 
-            return n;
-        }
+			//bottom
+			if (y > 0) {
+				Node n = grid[x, y - 1];
+				if (n == null) {
+					CreateAt(x, y - 1, true);
+				}
+			}
 
-        void AddPathWalls(int x, int y)
-        {
-            //top node
-            if(y < maxY)
-            {
-                Node n = grid[x, y + 1];
-                if(n == null)
-                {
-                    CreateAt(x, y + 1, true);
-                }
-            }
+			//left node
+			if (x > 0) {
+				Node n = grid[x - 1, y];
+				if (n == null) {
+					CreateAt(x - 1, y, true);
+				}
+			}
+		}
+	}
 
-            //right node
-            if(x < maxX)
-            {
-                Node n = grid[x + 1, y];
-                if(n == null)
-                {
-                    CreateAt(x + 1, y, true);
-                }
-            }
-
-            //bottom
-            if(y > 0)
-            {
-                Node n = grid[x, y - 1];
-                if(n == null)
-                {
-                    CreateAt(x, y - 1, true);
-                }
-            }
-
-            //left node
-            if(x > 0)
-            {
-                Node n = grid[x - 1, y];
-                if(n == null)
-                {
-                    CreateAt(x - 1, y, true);
-                }
-            }
-        }
-    }
-
-    public class Node
-    {
-        public int x;
-        public int y;
-        public bool isWall;
-        public NodeReferences nodeReferences;
-    }
+	public class Node {
+		public int x;
+		public int y;
+		public bool isWall;
+		public NodeReferences nodeReferences;
+	}
 }
