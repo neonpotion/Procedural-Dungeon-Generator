@@ -31,17 +31,17 @@ namespace SA
                     col = Color.blue;
                 }
 
-                Vector3 bottomLineStart = new Vector3(c.x, c.y, 0);
-                Vector3 bottomLineEnd = new Vector3(c.x + c.width, c.y, 0);
+                Vector3 bottomLineStart = new Vector3(c.posX, c.posY, 0);
+                Vector3 bottomLineEnd = new Vector3(c.posX + c.width, c.posY, 0);
 
-                Vector3 topLineStart = new Vector3(c.x, c.y + c.height, 0);
-                Vector3 topLineEnd = new Vector3(c.x + c.width, c.y + c.height, 0);
+                Vector3 topLineStart = new Vector3(c.posX, c.posY + c.height, 0);
+                Vector3 topLineEnd = new Vector3(c.posX + c.width, c.posY + c.height, 0);
 
-                Vector3 leftLineStart = new Vector3(c.x, c.y, 0);
-                Vector3 leftLineEnd = new Vector3(c.x, c.y + c.height, 0);
+                Vector3 leftLineStart = new Vector3(c.posX, c.posY, 0);
+                Vector3 leftLineEnd = new Vector3(c.posX, c.posY + c.height, 0);
 
-                Vector3 rightLineStart = new Vector3(c.x + c.width, c.y, 0);
-                Vector3 rightLineEnd = new Vector3(c.x + c.width, c.y + c.height, 0);
+                Vector3 rightLineStart = new Vector3(c.posX + c.width, c.posY, 0);
+                Vector3 rightLineEnd = new Vector3(c.posX + c.width, c.posY + c.height, 0);
 
                 Debug.DrawLine(bottomLineStart, bottomLineEnd, col);
                 Debug.DrawLine(topLineStart, topLineEnd, col);

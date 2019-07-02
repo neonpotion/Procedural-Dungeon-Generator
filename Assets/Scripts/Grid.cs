@@ -29,7 +29,7 @@ namespace SA
         void Start()
         {
             levelGenerator.OnLevelGenerationComplete = LevelGenerated;
-            levelGenerator.GenerateLevel();
+//             levelGenerator.GenerateLevel();
         }
 
         void LevelGenerated()
@@ -55,9 +55,9 @@ namespace SA
             #region Render Cells
             foreach (GeneratorCell c in levelGenerator.cells)
             {
-                for (int x = c.x; x <= c.x + c.width; x++)
+                for (int x = c.posX; x <= c.posX + c.width; x++)
                 {
-                    for (int y = c.y; y <= c.y + c.height; y++)
+                    for (int y = c.posY; y <= c.posY + c.height; y++)
                     {
                         Node n = grid[x, y];
                         if(n == null)
@@ -68,7 +68,7 @@ namespace SA
 
                         bool isWall = false;
     
-                        if (x == c.x || x == c.x + c.width || y == c.y || y == c.y + c.height)
+                        if (x == c.posX || x == c.posX + c.width || y == c.posY || y == c.posY + c.height)
                         {
                             isWall = true;
                         }

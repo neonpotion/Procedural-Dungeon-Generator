@@ -40,7 +40,7 @@ namespace SA
             if(header == null)
             {
                 GameObject go = new GameObject();
-                go.name = "Level Generator Header";
+                go.name = "Level Generator";
                 header = go.AddComponent<LevelGeneratorHeader>();
             }
 
@@ -85,7 +85,7 @@ namespace SA
                 yield return new WaitForSeconds(1);
             }
 
-            FindCellLines();
+//             FindCellLines();
             if (debug)
             {
                 Debug.Log("FindCellLines");
@@ -142,8 +142,8 @@ namespace SA
 
 
                 Vector2 pos = GetRandomPointInCirlce(roomCircleRadius);
-                cell.x = Mathf.RoundToInt(pos.x);
-                cell.y = Mathf.RoundToInt(pos.y);
+                cell.posX = Mathf.RoundToInt(pos.x);
+                cell.posY = Mathf.RoundToInt(pos.y);
                 cell.index = i;
                 cells.Add(cell);
                 widthAvg += cell.width;
@@ -162,48 +162,47 @@ namespace SA
             {
                 loop++;
                 cellCollision = false;
-                if(debug)
-                {
-       //             Debug.Log("Loop " + loop);
-                }
 
                 for (int i = 0; i < cells.Count; i++)
                 {
-                    GeneratorCell c = cells[i];
+                    GeneratorCell cell = cells[i];
 
+					///Check all the other cells in the list if it's colliding with our cell
                     for (int j = i + 1; j < cells.Count; j++)
                     {
-                        GeneratorCell cb = cells[j];
-                        if(c.CollidesWith(cb))
+                        GeneratorCell cell2 = cells[j];
+                        if(cell.CollidesWith(cell2))
                         {
                             cellCollision = true;
 
-                            int cb_x = Mathf.RoundToInt((c.x + c.width) - cb.x);
-                            int c_x = Mathf.RoundToInt((cb.x + cb.width) - c.x);
+                            int cell2XOverlap = Mathf.RoundToInt((cell.posX + cell.width) - cell2.posX);
+                            int cellXOverlap = Mathf.RoundToInt((cell2.posX + cell2.width) - cell.posX);
 
-                            int cb_y = Mathf.RoundToInt((c.y + c.height) - cb.y);
-                            int c_y = Mathf.RoundToInt((cb.y + cb.height) - c.y);
-
-                            if (c_x < cb_x)
+                            int cell2YOverlap = Mathf.RoundToInt((cell.posY + cell.height) - cell2.posY);
+                            int cellYOverlap = Mathf.RoundToInt((cell2.posY + cell2.height) - cell.posY);
+							//If the cells are colliding. Move the one on the left.
+                            if (cellXOverlap < cell2XOverlap)
                             {
-                                if (c_x < c_y)
+								//Move horizontally if distance from the origin has more bias towards Y. 
+								//Otherwise, Move Vertically
+                                if (cellXOverlap < cellYOverlap)
                                 {
-                                    c.Shift(c_x, 0);
+                                    cell.OffsetPosition(cellXOverlap, 0);
                                 }
                                 else
                                 {
-                                    c.Shift(0, c_y);
+                                    cell.OffsetPosition(0, cellYOverlap);
                                 }
                             }
                             else
                             {
-                                if (cb_x < cb_y)
+                                if (cell2XOverlap < cell2YOverlap)
                                 {
-                                    cb.Shift(cb_x, 0);
+                                    cell2.OffsetPosition(cell2XOverlap, 0);
                                 }
                                 else
                                 {
-                                    cb.Shift(0, cb_y);
+                                    cell2.OffsetPosition(0, cell2YOverlap);
                                 }
                             }
                         }
@@ -236,12 +235,12 @@ namespace SA
                 if (c.isMainRoom)
                 {
                     colors.Add(0);
-                    points.Add(new Vector2(c.x + (c.width / 2), c.y + (c.height / 2)));
-                    min.x = Mathf.Min(c.x, min.x);
-                    min.y = Mathf.Min(c.y, min.y);
+                    points.Add(new Vector2(c.posX + (c.width / 2), c.posY + (c.height / 2)));
+                    min.x = Mathf.Min(c.posX, min.x);
+                    min.y = Mathf.Min(c.posY, min.y);
 
-                    max.x = Mathf.Max(c.x, max.x);
-                    max.y = Mathf.Max(c.y, max.y);
+                    max.x = Mathf.Max(c.posX, max.x);
+                    max.y = Mathf.Max(c.posY, max.y);
                 }
             }
 
@@ -289,40 +288,13 @@ namespace SA
             spanningTree.AddRange(linesToAdd);
             delaunayLines.Clear();
         }
-
-        void FindCellLines()
-        {
-            foreach (LineSegment l in spanningTree)
-            {
-                GeneratorCell cellStart = GetCellByPoint(l.p0.Value.x, l.p0.Value.y);
-                if(cellStart != null)
-                {
-                    l.cellStart = cellStart;
-                }
-                else
-                {
-                    Debug.LogError("Could not find cell start for " + l.p0.Value);
-                }
-
-                GeneratorCell cellEnd = GetCellByPoint(l.p1.Value.x, l.p1.Value.y);
-                if(cellEnd != null)
-                {
-                    l.cellEnd = cellEnd;
-                }
-                else
-                {
-                    Debug.LogError("Could not find cell end for " + l.p1.Value);
-                }
-            }
-        }
-
         void FindPathBetweenBlocks()
         {
             foreach (LineSegment l in spanningTree)
             {
                 Path path = new Path();
-                path.from = l.cellStart;
-                path.to = l.cellEnd;
+                path.from = GetCellByPoint(l.p0.Value.x, l.p0.Value.y);
+                path.to = GetCellByPoint(l.p1.Value.x, l.p1.Value.y);
 
                 Vector2 startPoint = l.p0.Value;
                 Vector2 endPoint = l.p1.Value;
@@ -370,10 +342,10 @@ namespace SA
                 GeneratorCell c = cells[c_index];
                 if(c.isMainRoom || c.isPathRoom)
                 {
-                    maxX = Mathf.Max(c.x + c.width, maxX);
-                    maxY = Mathf.Max(c.y + c.height, maxY);
-                    minX = Mathf.Min(c.x, minX);
-                    minY = Mathf.Min(c.y, minY);
+                    maxX = Mathf.Max(c.posX + c.width, maxX);
+                    maxY = Mathf.Max(c.posY + c.height, maxY);
+                    minX = Mathf.Min(c.posX, minX);
+                    minY = Mathf.Min(c.posY, minY);
 
                     c_index++;
                 }
@@ -385,10 +357,10 @@ namespace SA
 
             foreach (GeneratorCell c in cells)
             {
-                c.x += Mathf.CeilToInt(Mathf.Abs(minX));
-                c.y += Mathf.CeilToInt(Mathf.Abs(minY));
-                maxX = Mathf.Max(c.x, c.width, maxX);
-                maxY = Mathf.Max(c.y + c.height, maxY);
+                c.posX += Mathf.CeilToInt(Mathf.Abs(minX));
+                c.posY += Mathf.CeilToInt(Mathf.Abs(minY));
+                maxX = Mathf.Max(c.posX, c.width, maxX);
+                maxY = Mathf.Max(c.posY + c.height, maxY);
             }
 
             foreach (Path p in paths)
@@ -429,12 +401,18 @@ namespace SA
             return retVal;
         }
 
+		/// <summary>
+		/// Finds a cell at the given point.
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		/// <returns></returns>
         GeneratorCell GetCellByPoint(float x, float y)
         {
             GeneratorCell retCell = null;
             foreach (GeneratorCell c in cells)
             {
-                if (c.x < x && c.y < y && c.x + c.width > x && c.y + c.height > y)
+                if (c.posX < x && c.posY < y && c.posX + c.width > x && c.posY + c.height > y)
                 {
                     retCell = c;
                     break;
@@ -476,16 +454,16 @@ namespace SA
             Vector2 intersection;
 
             BlockPath topLine = new BlockPath();
-            topLine.start = new Vector2(rect.x, rect.y + rect.height);
-            topLine.end = new Vector2(rect.x + rect.width, rect.y + rect.height);
+            topLine.start = new Vector2(rect.posX, rect.posY + rect.height);
+            topLine.end = new Vector2(rect.posX + rect.width, rect.posY + rect.height);
             if (LineIntersects(line.start, line.end, topLine.start, topLine.end, out intersection))
             {
                 retVal = true;
             }
 
             BlockPath rightLine = new BlockPath();
-            rightLine.start = new Vector2(rect.x + rect.width, rect.y + rect.height);
-            rightLine.end = new Vector2(rect.x + rect.width, rect.y);
+            rightLine.start = new Vector2(rect.posX + rect.width, rect.posY + rect.height);
+            rightLine.end = new Vector2(rect.posX + rect.width, rect.posY);
             if (LineIntersects(line.start, line.end, rightLine.start, rightLine.end, out intersection))
             {
                 retVal = true;
@@ -493,8 +471,8 @@ namespace SA
 
 
             BlockPath bottomLine = new BlockPath();
-            bottomLine.start = new Vector2(rect.x, rect.y);
-            bottomLine.end = new Vector2(rect.x + rect.width, rect.y);
+            bottomLine.start = new Vector2(rect.posX, rect.posY);
+            bottomLine.end = new Vector2(rect.posX + rect.width, rect.posY);
             if (LineIntersects(line.start, line.end, bottomLine.start, bottomLine.end, out intersection))
             {
                 retVal = true;
@@ -502,8 +480,8 @@ namespace SA
 
 
             BlockPath leftLine = new BlockPath();
-            leftLine.start = new Vector2(rect.x, rect.y);
-            leftLine.end = new Vector2(rect.x, rect.y + rect.height);
+            leftLine.start = new Vector2(rect.posX, rect.posY);
+            leftLine.end = new Vector2(rect.posX, rect.posY + rect.height);
             if (LineIntersects(line.start, line.end, leftLine.start, leftLine.end, out intersection))
             {
                 retVal = true;

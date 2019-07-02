@@ -7,8 +7,8 @@ namespace SA
     public class GeneratorCell 
     {
         public int index;
-        public int x;
-        public int y;
+        public int posX;
+        public int posY;
 
         public int width;
         public int height;
@@ -20,10 +20,10 @@ namespace SA
         {
             bool retVal = true;
 
-            if(cell.x >= this.x + this.width ||
-                cell.y >= this.y + this.height ||
-                cell.x + cell.width <= this.x ||
-                cell.y + cell.height <= this.y)
+            if(cell.posX >= this.posX + this.width ||
+                cell.posY >= this.posY + this.height ||
+                cell.posX + cell.width <= this.posX ||
+                cell.posY + cell.height <= this.posY)
             {
                 retVal = false;
             }
@@ -31,10 +31,10 @@ namespace SA
             return retVal;
         }
 
-        public void Shift(int shiftX, int shiftY)
+        public void OffsetPosition(int offsetX, int offsetY)
         {
-            x += shiftX;
-            y += shiftY;
+            posX += offsetX;
+            posY += offsetY;
         }
 
     }

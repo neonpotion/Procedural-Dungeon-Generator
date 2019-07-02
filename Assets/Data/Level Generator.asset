@@ -3,8 +3,9 @@
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
@@ -12,4 +13,4 @@ MonoBehaviour:
   m_Name: Level Generator
   m_EditorClassIdentifier: 
   levelStats: {fileID: 11400000, guid: 65d2ecc3af29144498be1cf10748fee3, type: 2}
-  debug: 0
+  debug: 1
